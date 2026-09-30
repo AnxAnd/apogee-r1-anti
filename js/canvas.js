@@ -601,20 +601,21 @@ class OrbitalCanvas {
     // Reset shadow for crisp text
     ctx.shadowBlur = 0;
 
-    // "CORE" Header Text
-    ctx.font = '900 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    // Active Goal Title (Centered prominently inside the glowing dome)
+    ctx.font = '900 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('CORE', this.cx, this.cy - r * 0.55);
 
-    // Active Project / Goal Subtitle
-    ctx.font = 'bold 8px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    
-    let goalDisplay = this.coreGoal.toUpperCase();
-    if (goalDisplay.length > 14) goalDisplay = goalDisplay.slice(0, 12) + '…';
-    ctx.fillText(goalDisplay, this.cx, this.cy - r * 0.25);
+    let goalDisplay = (this.coreGoal || 'GOAL').toUpperCase();
+    const maxGoalWidth = r * 1.45;
+    if (ctx.measureText(goalDisplay).width > maxGoalWidth) {
+      while (goalDisplay.length > 2 && ctx.measureText(goalDisplay + '…').width > maxGoalWidth) {
+        goalDisplay = goalDisplay.slice(0, -1);
+      }
+      goalDisplay += '…';
+    }
+    ctx.fillText(goalDisplay, this.cx, this.cy - r * 0.42);
 
     ctx.restore();
   }
