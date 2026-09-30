@@ -17,23 +17,25 @@ This project strictly adheres to the official `creations-sdk` specification:
 3. **PTT Side Button (`sideClick` / `longPressStart`)**:
    - Single click: Quick action (opens Quick-Add modal or closes sheets).
    - Long press: Triggers the **R1 AI Copilot** to automatically generate 3 focus tasks for the active Core goal.
-4. **Persistent Storage (`window.creationStorage.plain`)**:
-   - Automatically saves all projects and tasks in Base64 encoding.
-   - Includes transparent fallback to `localStorage` when running in a desktop browser or DevTools.
+4. **Bulletproof Dual-Engine Persistence (`window.creationStorage.plain` + `localStorage`)**:
+   - Multi-layered mirrored writes to both `window.creationStorage.plain` (official rabbitOS Creations SDK standard) and persistent `localStorage`.
+   - Automatic state synchronization on `visibilitychange` (app backgrounding), `pagehide`, and explicit app drawer exit.
+   - Protects user tasks and active core goals across device restarts and app relaunches.
 5. **R1 AI Copilot (`PluginMessageHandler`)**:
    - Integrates with rabbitOS LLM channel (`useLLM: true`) to suggest and break down tasks.
 6. **Clean Exit (`closeWebView`)**:
-   - Exits back to rabbitOS launcher cleanly upon tapping "Exit to rabbitOS" in the drawer.
+   - Safely flushes pending state saves to disk before exiting cleanly to the rabbitOS launcher.
 
 ---
 
 ## Visual Design & Architecture
 
-- **Bottom Anchor (CORE)**: Radiant orange semi-circular dome representing the active project goal.
+- **Bottom Anchor (CORE)**: Radiant orange semi-circular dome displaying the active goal title centered in high-contrast typography. Tapping the dome opens the Core Sheet.
+- **Gravitational Absorption & History**: Completed tasks collapse downwards into the Core with a burst celebration. Tapping the Core reveals all absorbed tasks, allowing you to review your accomplishments or **restore any task back to orbit** with a single tap.
 - **ORBIT 1 (Focus)**: Inner golden arc for high-priority tasks (doing now).
 - **ORBIT 2 (Up Next)**: Middle electric cyan arc for queued tasks (ready to start).
 - **ORBIT 3 (Backlog)**: Outer purple arc for long-range tasks and idea hopper.
-- **Gravitational Absorption**: When completing a task, the satellite animates downwards, collapsing directly into the Core with a pulse celebration.
+- **Touch Target Optimization**: Enlarged 68×44px hitboxes with device-normalized touch scaling for responsive, drift-free selection on the 240×282 display.
 
 ---
 
@@ -41,18 +43,21 @@ This project strictly adheres to the official `creations-sdk` specification:
 
 ```text
 apogee-r1-anti/
-├── index.html          # Main SPA shell (240x282 viewport)
+├── index.html          # Main SPA shell (240x282 viewport with anti-caching meta)
 ├── css/
 │   └── styles.css      # rabbitOS Dark Mode styling, bottom sheet & modal transitions
 ├── js/
 │   ├── app.js          # Main application orchestrator & state manager
 │   ├── canvas.js       # Orbital physics canvas & wheel/touch rotation engine
 │   ├── hardware.js     # creations-sdk hardware listener bridge + desktop preview controls
-│   ├── storage.js      # Base64 creationStorage adapter with localStorage fallback
+│   ├── storage.js      # Multi-layered mirrored storage engine (plain + localStorage)
 │   └── copilot.js      # PluginMessageHandler LLM bridge for AI task generation
 ├── assets/
 │   ├── apogeer1ui.png  # Reference UI graphic
 │   └── original.jpg    # Hand-drawn reference sketch
+├── r1-install-qr.png   # Scannable PNG installation QR code (?build=5)
+├── r1-install-qr.svg   # Vector SVG installation QR code (?build=5)
+├── generate-qr.html    # Interactive QR code generator tool
 └── README.md           # This document
 ```
 
@@ -80,7 +85,7 @@ You can preview and test **Apogee R1 Anti** directly on your desktop before load
 ## Live Deployment & Rabbit R1 Installation
 
 ### 🚀 Live URL
-**`https://anxand.github.io/apogee-r1-anti/`**
+**`https://anxand.github.io/apogee-r1-anti/?build=5`**
 
 ### 📱 Quick Scan & Install
 Point your Rabbit R1 camera at this QR code to install **Apogee R1 Anti**:
@@ -100,7 +105,7 @@ Point your Rabbit R1 camera at this QR code to install **Apogee R1 Anti**:
 Your data is completely private and never leaves your Rabbit R1 device:
 
 - **100% Client-Side Architecture**: The entire application runs as a local Single Page Application within the rabbitOS Webview container.
-- **Hardware-Level Encryption**: Task and goal data is saved directly into the R1's sandboxed `window.creationStorage.secure` interface, backed by hardware-backed encryption (Android Keystore).
+- **Local Sandboxed Storage**: Task and goal data is saved directly into the R1's sandboxed `window.creationStorage.plain` and local web storage.
 - **Zero Cloud Leakage**: GitHub Pages functions solely as a static asset host (HTML, CSS, JS). No server-side database exists, no APIs receive your data, and no telemetry, cookies, or tracking scripts are embedded.
-- **Offline Capable**: Once loaded into rabbitOS cache, orbital task manipulation and note editing function entirely without internet connectivity.
+- **Offline Capable**: Once loaded into rabbitOS cache, orbital task manipulation, creation, and note editing function entirely without internet connectivity.
 
