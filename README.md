@@ -77,9 +77,30 @@ You can preview and test **Apogee R1 Anti** directly on your desktop before load
 
 ---
 
-## Deploying to Rabbit R1
+## Live Deployment & Rabbit R1 Installation
 
-To run this creation on your Rabbit R1:
-1. Host these files on any static HTTPS web server (GitHub Pages, Cloudflare Pages, Vercel, or your own server).
-2. Generate a QR code pointing to your hosted URL using the tool in `creations-sdk/qr`.
-3. Point your Rabbit R1 camera at the QR code to install and launch your creation.
+### 🚀 Live URL
+**`https://anxand.github.io/apogee-r1-anti/`**
+
+### 📱 Quick Scan & Install
+Point your Rabbit R1 camera at this QR code to install **Apogee R1 Anti**:
+
+<p align="center">
+  <img src="r1-install-qr.png" alt="Rabbit R1 Install QR Code" width="220" />
+</p>
+
+1. **Launch R1 Camera**: Double-click the physical PTT side button on your Rabbit R1.
+2. **Scan**: Aim the camera at the QR code above (or open `generate-qr.html` in your browser).
+3. **Install**: Tap the screen banner on the R1 to install **Apogee R1 Anti** directly into your rabbitOS Creations launcher.
+
+---
+
+## 🔒 Privacy & Data Sovereignty
+
+Your data is completely private and never leaves your Rabbit R1 device:
+
+- **100% Client-Side Architecture**: The entire application runs as a local Single Page Application within the rabbitOS Webview container.
+- **Hardware-Level Encryption**: Task and goal data is saved directly into the R1's sandboxed `window.creationStorage.secure` interface, backed by hardware-backed encryption (Android Keystore).
+- **Zero Cloud Leakage**: GitHub Pages functions solely as a static asset host (HTML, CSS, JS). No server-side database exists, no APIs receive your data, and no telemetry, cookies, or tracking scripts are embedded.
+- **Offline Capable**: Once loaded into rabbitOS cache, orbital task manipulation and note editing function entirely without internet connectivity.
+
