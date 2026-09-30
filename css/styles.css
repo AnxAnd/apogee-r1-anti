@@ -129,6 +129,7 @@ html, body {
   height: 250px;
   overflow: hidden;
   cursor: grab;
+  touch-action: none;
 }
 
 .canvas-container:active {
@@ -139,6 +140,7 @@ html, body {
   display: block;
   width: 240px;
   height: 250px;
+  touch-action: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -334,10 +336,12 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  pointer-events: none;
 }
 
 .bottom-sheet.open {
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 .sheet-handle {

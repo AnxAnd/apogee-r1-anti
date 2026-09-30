@@ -310,10 +310,19 @@
 
     // Close sheet when tapping on backdrop (tap outside)
     if (els.sheetBackdrop) {
-      els.sheetBackdrop.addEventListener('click', () => {
+      const handleBackdropDismiss = (e) => {
+        // Prevent ghost click from the touch event that just opened the sheet
+        if (Date.now() - lastSheetOpenTime < 450) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
         if (window.ApogeeAudio) ApogeeAudio.playTap();
         closeTaskSheet();
-      });
+      };
+
+      els.sheetBackdrop.addEventListener('click', handleBackdropDismiss);
+      els.sheetBackdrop.addEventListener('touchend', handleBackdropDismiss);
     }
 
     // Close sheet when clicking close '×' button
@@ -388,7 +397,10 @@
   // --------------------------------------------------------------------------
   // Bottom Sheet Controller
   // --------------------------------------------------------------------------
+  let lastSheetOpenTime = 0;
+
   function openTaskSheet(task) {
+    lastSheetOpenTime = Date.now();
     AppState.selectedTaskId = task.id;
     if (canvas) canvas.selectedTaskId = task.id;
 

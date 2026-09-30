@@ -12,16 +12,16 @@ class OrbitalCanvas {
 
     // Viewport geometry (fixed 240x282)
     this.width = 240;
-    this.height = 282;
+    this.height = 250;
     this.cx = 120;     // Center X
-    this.cy = 280;     // Center Y (anchored at bottom edge)
+    this.cy = 250;     // Center Y (anchored at bottom edge of canvas)
 
-    // Orbital Radii
-    this.coreRadius = 46;
+    // Orbital Radii (scaled for 250px container with 42px Core dome)
+    this.coreRadius = 42;
     this.orbits = [
-      { id: 1, name: 'ORBIT 1', label: 'FOCUS', radius: 94, color: '#FFB800', glow: 'rgba(255, 184, 0, 0.4)' },
-      { id: 2, name: 'ORBIT 2', label: 'UP NEXT', radius: 146, color: '#00E5FF', glow: 'rgba(0, 229, 255, 0.35)' },
-      { id: 3, name: 'ORBIT 3', label: 'BACKLOG', radius: 200, color: '#A855F7', glow: 'rgba(168, 85, 247, 0.3)' }
+      { id: 1, name: 'ORBIT 1', label: 'FOCUS', radius: 86, color: '#FFB800', glow: 'rgba(255, 184, 0, 0.4)' },
+      { id: 2, name: 'ORBIT 2', label: 'UP NEXT', radius: 134, color: '#00E5FF', glow: 'rgba(0, 229, 255, 0.35)' },
+      { id: 3, name: 'ORBIT 3', label: 'BACKLOG', radius: 182, color: '#A855F7', glow: 'rgba(168, 85, 247, 0.3)' }
     ];
 
     // Angular state (in radians, 0 = straight up)
@@ -36,11 +36,8 @@ class OrbitalCanvas {
     this.absorbAnimations = [];           // Tasks animating into the Core
     this.corePulse = 0;                   // Glow pulse intensity (0 to 1)
 
-    // Touch / Drag tracking
-    this.isDragging = false;
-    this.dragStartX = 0;
-    this.dragStartTime = 0;
-    this.lastDragX = 0;
+    // Tracking
+    this.lastTouchEndTime = 0;
 
     // Setup DPR and size
     this.setupCanvas();
@@ -54,91 +51,151 @@ class OrbitalCanvas {
     this.canvas.height = this.height * dpr;
     this.canvas.style.width = `${this.width}px`;
     this.canvas.style.height = `${this.height}px`;
+    if (this.ctx.resetTransform) {
+      this.ctx.resetTransform();
+    }
     this.ctx.scale(dpr, dpr);
   }
 
-  bindEvents() {
-    // 1. Touch Drag & Tap
-    this.canvas.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      const rect = this.canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
+  getEventPos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    let clientX = 0;
+    let clientY = 0;
 
-      this.isDragging = true;
-      this.dragStartX = x;
-      this.lastDragX = x;
-      this.dragStartTime = performance.now();
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = e.clientX !== undefined ? e.clientX : 0;
+      clientY = e.clientY !== undefined ? e.clientY : 0;
+    }
+
+    const scaleX = this.width / (rect.width || this.width);
+    const scaleY = this.height / (rect.height || this.height);
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  }
+
+  bindEvents() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastTouchX = 0;
+    let touchStartTime = 0;
+    let isTouchActive = false;
+    let hasMovedBeyondSlop = false;
+
+    // 1. Touch Drag & Tap (Optimized for Rabbit R1 2.88" touchscreen)
+    this.canvas.addEventListener('touchstart', (e) => {
+      const pos = this.getEventPos(e);
+      touchStartX = pos.x;
+      touchStartY = pos.y;
+      lastTouchX = pos.x;
+      touchStartTime = performance.now();
+      isTouchActive = true;
+      hasMovedBeyondSlop = false;
       this.angularVelocity = 0;
     }, { passive: true });
 
     this.canvas.addEventListener('touchmove', (e) => {
-      if (!this.isDragging) return;
-      const touch = e.touches[0];
-      const rect = this.canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
+      if (!isTouchActive) return;
+      const pos = this.getEventPos(e);
+      const totalDist = Math.hypot(pos.x - touchStartX, pos.y - touchStartY);
 
-      const deltaX = x - this.lastDragX;
-      this.lastDragX = x;
+      // Touch slop threshold: only rotate when finger moves > 8px
+      if (!hasMovedBeyondSlop && totalDist > 8) {
+        hasMovedBeyondSlop = true;
+      }
 
-      // Convert deltaX into angular rotation
-      const deltaAngle = (deltaX / 120);
-      this.orbitRotation = this.orbitRotation.map(r => r + deltaAngle);
+      if (hasMovedBeyondSlop) {
+        const deltaX = pos.x - lastTouchX;
+        const deltaAngle = (deltaX / 120);
+        this.orbitRotation = this.orbitRotation.map(r => r + deltaAngle);
+      }
+      lastTouchX = pos.x;
     }, { passive: true });
 
     this.canvas.addEventListener('touchend', (e) => {
-      if (!this.isDragging) return;
-      this.isDragging = false;
+      if (!isTouchActive) return;
+      isTouchActive = false;
+      this.lastTouchEndTime = performance.now();
 
-      const duration = performance.now() - this.dragStartTime;
-      const totalDeltaX = this.lastDragX - this.dragStartX;
+      const duration = performance.now() - touchStartTime;
+      const pos = this.getEventPos(e);
 
-      if (Math.abs(totalDeltaX) < 8 && duration < 300) {
-        // Tap detected!
-        const touch = e.changedTouches[0];
-        const rect = this.canvas.getBoundingClientRect();
-        this.handleTap(touch.clientX - rect.left, touch.clientY - rect.top);
-      } else {
+      if (!hasMovedBeyondSlop && duration < 650) {
+        // Definite Tap! Use initial touch location
+        if (e.cancelable) e.preventDefault();
+        this.handleTap(touchStartX, touchStartY);
+      } else if (hasMovedBeyondSlop) {
         // Fling momentum
+        const totalDeltaX = pos.x - touchStartX;
         this.angularVelocity = (totalDeltaX / Math.max(duration, 50)) * 0.03;
       }
+    });
+
+    this.canvas.addEventListener('touchcancel', () => {
+      isTouchActive = false;
+      hasMovedBeyondSlop = false;
     });
 
     // 2. Mouse Drag & Click for Desktop Preview
     let isMouseDown = false;
     let mouseStartX = 0;
+    let mouseStartY = 0;
     let lastMouseX = 0;
     let mouseStartTime = 0;
+    let mouseMovedBeyondSlop = false;
 
     this.canvas.addEventListener('mousedown', (e) => {
+      // Ignore simulated mouse events generated from touch
+      if (performance.now() - this.lastTouchEndTime < 600) return;
+
       isMouseDown = true;
-      mouseStartX = e.offsetX;
-      lastMouseX = e.offsetX;
+      const pos = this.getEventPos(e);
+      mouseStartX = pos.x;
+      mouseStartY = pos.y;
+      lastMouseX = pos.x;
       mouseStartTime = performance.now();
+      mouseMovedBeyondSlop = false;
       this.angularVelocity = 0;
     });
 
     window.addEventListener('mousemove', (e) => {
       if (!isMouseDown) return;
-      const rect = this.canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const deltaX = x - lastMouseX;
-      lastMouseX = x;
+      if (performance.now() - this.lastTouchEndTime < 600) return;
 
-      const deltaAngle = (deltaX / 120);
-      this.orbitRotation = this.orbitRotation.map(r => r + deltaAngle);
+      const pos = this.getEventPos(e);
+      const totalDist = Math.hypot(pos.x - mouseStartX, pos.y - mouseStartY);
+      if (!mouseMovedBeyondSlop && totalDist > 5) {
+        mouseMovedBeyondSlop = true;
+      }
+
+      if (mouseMovedBeyondSlop) {
+        const deltaX = pos.x - lastMouseX;
+        const deltaAngle = (deltaX / 120);
+        this.orbitRotation = this.orbitRotation.map(r => r + deltaAngle);
+      }
+      lastMouseX = pos.x;
     });
 
     window.addEventListener('mouseup', (e) => {
       if (!isMouseDown) return;
       isMouseDown = false;
-      const duration = performance.now() - mouseStartTime;
-      const totalDelta = lastMouseX - mouseStartX;
+      if (performance.now() - this.lastTouchEndTime < 600) return;
 
-      if (Math.abs(totalDelta) < 6 && duration < 250) {
-        const rect = this.canvas.getBoundingClientRect();
-        this.handleTap(e.clientX - rect.left, e.clientY - rect.top);
-      } else {
+      const duration = performance.now() - mouseStartTime;
+      const pos = this.getEventPos(e);
+      const totalDelta = pos.x - mouseStartX;
+
+      if (!mouseMovedBeyondSlop && duration < 500) {
+        this.handleTap(mouseStartX, mouseStartY);
+      } else if (mouseMovedBeyondSlop) {
         this.angularVelocity = (totalDelta / Math.max(duration, 50)) * 0.03;
       }
     });
@@ -152,28 +209,47 @@ class OrbitalCanvas {
   }
 
   handleTap(x, y) {
-    // 1. Check if tap hit the Core dome
-    const distToCenter = Math.hypot(x - this.cx, y - this.cy);
-    if (distToCenter <= this.coreRadius + 8) {
-      if (this.options.onCoreTap) this.options.onCoreTap();
-      return;
-    }
+    // 1. HIGHEST PRIORITY: Check if tap hit any active task satellite
+    // Satellite pill is 48px wide and 16px high.
+    // Generous touch target: ±34px horizontally, ±22px vertically.
+    let bestTask = null;
+    let minDistanceSq = Infinity;
 
-    // 2. Check if tap hit any task chip
     for (let i = this.tasks.length - 1; i >= 0; i--) {
       const task = this.tasks[i];
       if (task.status === 'done') continue;
       const pos = this.getTaskCoordinates(task);
-      const hit = Math.hypot(x - pos.x, y - pos.y);
-      if (hit <= 18) { // Tap hit radius
-        if (this.options.onTaskTap) this.options.onTaskTap(task);
-        return;
+      const dx = Math.abs(x - pos.x);
+      const dy = Math.abs(y - pos.y);
+
+      if (dx <= 34 && dy <= 22) {
+        const distSq = dx * dx + dy * dy;
+        if (distSq < minDistanceSq) {
+          minDistanceSq = distSq;
+          bestTask = task;
+        }
       }
     }
 
-    // 3. Check if tap hit an orbit track (for quick-add into that orbit)
+    if (bestTask) {
+      this.selectedTaskId = bestTask.id;
+      if (window.ApogeeAudio) ApogeeAudio.playTap();
+      if (this.options.onTaskTap) this.options.onTaskTap(bestTask);
+      return;
+    }
+
+    // 2. Check if tap hit the Core dome
+    const distToCenter = Math.hypot(x - this.cx, y - this.cy);
+    if (distToCenter <= this.coreRadius + 8) {
+      if (window.ApogeeAudio) ApogeeAudio.playTap();
+      if (this.options.onCoreTap) this.options.onCoreTap();
+      return;
+    }
+
+    // 3. Check if tap hit an empty orbit track (for quick-add into that orbit)
     for (const orbit of this.orbits) {
-      if (Math.abs(distToCenter - orbit.radius) < 16) {
+      if (Math.abs(distToCenter - orbit.radius) < 14) {
+        if (window.ApogeeAudio) ApogeeAudio.playTap();
         if (this.options.onOrbitTap) this.options.onOrbitTap(orbit.id);
         return;
       }
