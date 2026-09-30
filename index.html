@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=240, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+  <title>Apogee R1 Anti</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header class="top-header">
+      <button id="menuBtn" class="icon-btn" aria-label="Menu">☰</button>
+      <div class="header-title-box">
+        <span class="pulse-dot"></span>
+        <span class="header-title">APOGEE R1</span>
+      </div>
+      <button id="addBtn" class="icon-btn primary" aria-label="Add Task">+</button>
+    </header>
+
+    <!-- Celestial Orbital Canvas Area -->
+    <div class="canvas-container">
+      <canvas id="orbitalCanvas"></canvas>
+    </div>
+
+    <!-- Side Menu Drawer -->
+    <div id="menuDrawer" class="menu-drawer">
+      <div class="drawer-header">
+        <h3>APOGEE ORBITS</h3>
+        <button id="closeDrawerBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="drawer-content scrollable-area">
+        <div class="drawer-section">
+          <span class="section-label">Active Core Goal</span>
+          <div id="projectList" style="display:flex; flex-direction:column; gap:4px;"></div>
+          <button id="newProjectBtn" class="action-btn" style="margin-top:2px;">+ New Goal</button>
+        </div>
+
+        <div class="drawer-section">
+          <span class="section-label">R1 AI Copilot</span>
+          <button id="copilotBtn" class="action-btn ai">⚡ Auto-Plan 3 Tasks</button>
+        </div>
+
+        <div class="drawer-section">
+          <span class="section-label">Telemetry</span>
+          <div style="font-size:10px; color:#AAA; padding:4px 0;">
+            Completed: <span id="doneCount" style="color:#00FF66; font-weight:bold;">0</span>
+          </div>
+          <button id="clearDoneBtn" class="action-btn danger">Clear Completed</button>
+        </div>
+
+        <div class="drawer-section">
+          <span class="section-label">Settings</span>
+          <button id="audioToggleBtn" class="action-btn">🔊 Audio Cues: ON</button>
+        </div>
+
+        <button id="exitAppBtn" class="action-btn exit">✕ Exit to rabbitOS</button>
+      </div>
+    </div>
+
+    <!-- Task Bottom Sheet Backdrop (Tap outside to return) -->
+    <div id="sheetBackdrop" class="sheet-backdrop"></div>
+
+    <!-- Task Inspector Bottom Sheet -->
+    <div id="taskSheet" class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title-row">
+        <input type="text" id="sheetTaskTitle" class="sheet-title-input" value="Task Details" maxlength="32" placeholder="Task name">
+        <button id="closeSheetBtn" class="close-btn" style="font-size:14px; padding:0 4px;" aria-label="Close">&times;</button>
+      </div>
+      <input type="text" id="sheetTaskNotes" class="sheet-notes-input" placeholder="+ Add a note..." maxlength="100">
+      <div class="orbit-switch-row">
+        <div class="orbit-pill" data-orbit="1">1 FOCUS</div>
+        <div class="orbit-pill" data-orbit="2">2 UP NEXT</div>
+        <div class="orbit-pill" data-orbit="3">3 BACKLOG</div>
+      </div>
+      <div class="sheet-actions">
+        <button id="completeBtn" class="btn-complete">✓ Complete</button>
+        <button id="deleteBtn" class="btn-delete">🗑</button>
+      </div>
+    </div>
+
+    <!-- Quick Add Task Modal -->
+    <div id="taskModal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-title">
+          <span>Launch Satellite</span>
+          <button id="closeTaskModal" class="close-btn">&times;</button>
+        </div>
+        <input type="text" id="taskInput" class="text-input" placeholder="Task name..." maxlength="32">
+        <div class="orbit-switch-row" id="modalOrbitRow">
+          <div class="orbit-pill active" data-orbit="1">Focus</div>
+          <div class="orbit-pill" data-orbit="2">Up Next</div>
+          <div class="orbit-pill" data-orbit="3">Backlog</div>
+        </div>
+        <div class="modal-btns">
+          <button id="saveTaskBtn" class="btn-save">Launch</button>
+          <button id="cancelTaskBtn" class="btn-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Core Goal Edit & Absorbed Satellites Modal -->
+    <div id="goalModal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-title">
+          <span>Core Anchor Goal</span>
+          <button id="closeGoalModal" class="close-btn">&times;</button>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="goalInput" class="text-input" placeholder="Project goal name..." maxlength="24">
+          <button id="saveGoalBtn" class="btn-save" style="flex:none; padding:6px 12px;">Save</button>
+        </div>
+
+        <!-- Absorbed Satellites in Core -->
+        <div class="absorbed-section" id="absorbedSection">
+          <div class="absorbed-header">
+            <span class="section-label">Absorbed in Core</span>
+            <span id="absorbedCountBadge" class="absorbed-badge">0</span>
+          </div>
+          <div id="absorbedList" class="absorbed-list scrollable-area"></div>
+        </div>
+
+        <div class="modal-btns">
+          <button id="cancelGoalBtn" class="btn-cancel" style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Popup -->
+    <div id="toast" class="toast-notice">Notice</div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/hardware.js"></script>
+  <script src="js/copilot.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
