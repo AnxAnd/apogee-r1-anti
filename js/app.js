@@ -102,28 +102,49 @@
   // State & Persistence
   // --------------------------------------------------------------------------
   async function loadState() {
-    const savedProjects = await ApogeeStorage.getItem('apogee_projects');
-    const savedActiveId = await ApogeeStorage.getItem('apogee_active_project');
-    const savedTasks = await ApogeeStorage.getItem('apogee_tasks');
+    try {
+      const isInit = await ApogeeStorage.getItem('apogee_initialized', false);
+      const savedProjects = await ApogeeStorage.getItem('apogee_projects');
+      const savedActiveId = await ApogeeStorage.getItem('apogee_active_project');
+      const savedTasks = await ApogeeStorage.getItem('apogee_tasks');
 
-    if (savedProjects && Array.isArray(savedProjects) && savedProjects.length > 0) {
-      AppState.projects = savedProjects;
-    }
-    if (savedActiveId) {
-      AppState.activeProjectId = savedActiveId;
-    }
-    if (savedTasks && Array.isArray(savedTasks) && savedTasks.length > 0) {
-      AppState.tasks = savedTasks;
-    } else {
-      AppState.tasks = SEED_TASKS;
-      await saveState();
+      if (!isInit && (!savedTasks || savedTasks.length === 0)) {
+        // First boot ever: seed defaults
+        AppState.projects = [{ id: 'proj-1', name: 'Launch R1' }];
+        AppState.activeProjectId = 'proj-1';
+        AppState.tasks = SEED_TASKS;
+        await ApogeeStorage.setItem('apogee_initialized', true);
+        await saveState();
+        return;
+      }
+
+      if (savedProjects && Array.isArray(savedProjects) && savedProjects.length > 0) {
+        AppState.projects = savedProjects;
+      }
+      if (savedActiveId && AppState.projects.some(p => p.id === savedActiveId)) {
+        AppState.activeProjectId = savedActiveId;
+      } else if (AppState.projects.length > 0) {
+        AppState.activeProjectId = AppState.projects[0].id;
+      }
+      if (savedTasks && Array.isArray(savedTasks)) {
+        AppState.tasks = savedTasks;
+      }
+      // Ensure initialized flag is marked
+      await ApogeeStorage.setItem('apogee_initialized', true);
+    } catch (err) {
+      console.error('[Apogee R1 Anti] Error loading state:', err);
     }
   }
 
   async function saveState() {
-    await ApogeeStorage.setItem('apogee_projects', AppState.projects);
-    await ApogeeStorage.setItem('apogee_active_project', AppState.activeProjectId);
-    await ApogeeStorage.setItem('apogee_tasks', AppState.tasks);
+    try {
+      await ApogeeStorage.setItem('apogee_initialized', true);
+      await ApogeeStorage.setItem('apogee_projects', AppState.projects);
+      await ApogeeStorage.setItem('apogee_active_project', AppState.activeProjectId);
+      await ApogeeStorage.setItem('apogee_tasks', AppState.tasks);
+    } catch (err) {
+      console.error('[Apogee R1 Anti] Error saving state:', err);
+    }
   }
 
   function getActiveProject() {
@@ -254,7 +275,8 @@
     });
 
     // Exit App to rabbitOS
-    els.exitAppBtn.addEventListener('click', () => {
+    els.exitAppBtn.addEventListener('click', async () => {
+      await saveState();
       ApogeeHardware.closeApp();
     });
 
@@ -391,6 +413,19 @@
     });
     els.taskModal.addEventListener('click', (e) => {
       if (e.target === els.taskModal) closeTaskModal();
+    });
+
+    // Auto-flush persistence when app is backgrounded, screen locks, or webview closes
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        saveState();
+      }
+    });
+    window.addEventListener('pagehide', () => {
+      saveState();
+    });
+    window.addEventListener('beforeunload', () => {
+      saveState();
     });
   }
 
